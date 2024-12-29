@@ -3,29 +3,16 @@
 #include <iostream>
 #include <random>
 #include <cmath>
+#include "PlayerChar.h"
 
-/*
-class UserBall {
-    public:
-	    UserBall(sf::Sprite& ballUser) : ballUser(ballUser) {}
-	    void moveBall() {
-		    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Left)) {
-			    ballUser.move({ -2,0 });
-			    ballUser.rotate(sf::degrees(-5));
-		    }
-		    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right)) {
-			    ballUser.move({ 2,0 });
-			    ballUser.rotate(sf::degrees(5));
-		    }
-		    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Up)) {
-			    ballUser.move({ 0, -2 });
-		    }
-		    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Down)) {
-			    ballUser.move({ 0,2 });
-		    }
-	};*/
+// Methods
+void checkEvents(sf::RenderWindow& window);
+// Get the user's profile directory
+const char* userProfile = std::getenv("USERPROFILE");
+// Construct the full path for sprites
+std::filesystem::path worldPath = std::filesystem::path(userProfile) / "source\\repos\\SFML-Project\\src\\assets\\world";
+std::filesystem::path charPath = std::filesystem::path(userProfile) / "source\\repos\\SFML-Project\\src\\assets\\chars";
 
-void keyboardMovements(sf::Sprite&);
 // random number generators for screen in 1600 x 800
 std::mt19937 rng(static_cast<unsigned int>(std::time(nullptr))); // Seed with time
 std::uniform_real_distribution<float> distX(0.0f, 1600.0f); // Range for x-axis
@@ -34,61 +21,56 @@ std::uniform_real_distribution<float> distY(0.0f, 800.0f);  // Range for y-axis
 // resolution
 const auto SCREEN_WIDTH = 1600, SCREEN_HEIGHT = 800;
 const sf::Vector2f SMALL_RECT_SIZE = { 5,20 }, MEDIUM_RECT_SIZE = { 25,100 }, LARGE_RECT_SIZE = { 125, 500};
+sf::Vector2f SCREEN_CENTER = { 1600 / 2.f, 800 / 2.f };
+
+
 
 int main()
 {   
+    if (!userProfile) {
+        std::cerr << "Error: USERPROFILE environment variable not found." << std::endl;
+        return -1;
+    }
     // Main Window Creation
-    sf::RenderWindow window(sf::VideoMode({ SCREEN_WIDTH, SCREEN_HEIGHT }), "SillyGame", sf::State::Windowed);
-    window.setMouseCursorVisible(1);
+    sf::RenderWindow window(sf::VideoMode({ SCREEN_WIDTH, SCREEN_HEIGHT }), "SillyGame", sf::Style::Default);
+    window.setMouseCursorVisible(0);
     window.setFramerateLimit(60);
-    // Get ball photo
-    sf::Texture blackBallTexture("assets/chars/BlackBallPurp1.png");
-    // Load ball into sprite
-    sf::Sprite ballUser(blackBallTexture);
-    ballUser.setTextureRect({ sf::IntRect({614, 334}, {50,50}) }); // grab ball picture
-    ballUser.setOrigin(ballUser.getGlobalBounds().getCenter());
-    // Set the sprite's position
-    ballUser.setPosition({SCREEN_WIDTH/2.f, SCREEN_HEIGHT/2.f});
-    ballUser.setScale({ 1, 1 });
+    // Textures
+    sf::Texture skyTexture(worldPath / "wallpaperflare.com_wallpaper.png");
+    // Sprites
+	sf::Sprite skySprite(skyTexture);
     sf::RectangleShape rect1(MEDIUM_RECT_SIZE);
+    rect1.setOrigin(rect1.getGeometricCenter());
 	rect1.setFillColor(sf::Color::Red);
     rect1.setPosition({distX(rng), distY(rng)});
-	sf::FloatRect rect1Bounds = rect1.getGlobalBounds();
-	//std::cout << rect1.getGlobalBounds().position.x << " " << rect1.getGlobalBounds().position.y << std::endl;
+    PlayerChar player(charPath / "BlackBall.png");
 
+
+  
     while (window.isOpen())
     {
-        while (const std::optional event = window.pollEvent())
-        {
-            if (event->is<sf::Event::Closed>())
-                window.close();
-        }
         window.clear(sf::Color::White);
-        window.draw(ballUser);
+		window.draw(skySprite);
+        window.draw(player.getSprite());
+        //window.draw(ballUser);
 		window.draw(rect1);
         window.display();
-        keyboardMovements(ballUser);
-        sf::FloatRect ballBounds = ballUser.getGlobalBounds();
-        if (const std::optional intersection = ballBounds.findIntersection(rect1Bounds)){
-			std::cout << ballUser.getGlobalBounds().position.x << " " << ballUser.getGlobalBounds().position.y << std::endl;    
-		}
+		player.keyboardMovements();
+        player.mouseMovements();
+        sf::FloatRect rect1Bounds = rect1.getGlobalBounds();
+        sf::FloatRect ballBounds = player.getSprite().getGlobalBounds();
+        if (const std::optional intersection = ballBounds.findIntersection(rect1Bounds)) {
+            std::cout << player.getSprite().getGlobalBounds().position.x << " " << player.getSprite().getGlobalBounds().position.y << std::endl;
+        }
+        checkEvents(window);
     }
 }
 
-// Handles movement of any sprite based on user keyboard inputs
-void keyboardMovements(sf::Sprite& ballUser) {
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Left)) {
-        ballUser.move({ -2,0 });
-        ballUser.rotate(sf::degrees(-5));
+// Handles events on user input
+void checkEvents(sf::RenderWindow& window) {
+    while (const std::optional event = window.pollEvent()) {
+        // Events to close window
+        if (event->is<sf::Event::Closed>() || sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Escape))
+            window.close();
     }
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right)) {
-        ballUser.move({ 2,0 });
-        ballUser.rotate(sf::degrees(5));
-    }
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Up)) {
-        ballUser.move({ 0, -2 });
-    }
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Down)) {
-        ballUser.move({ 0,2 });
-     }
- }
+}
